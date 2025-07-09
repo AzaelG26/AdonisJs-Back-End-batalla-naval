@@ -15,10 +15,9 @@ export default class Board extends BaseModel {
   userId?: number
 
   @column({
-    serialize: (value: string) => JSON.parse(value),
-    prepare: (value: any) => JSON.stringify(value),
+    prepare: (value: string[]) => JSON.stringify(value),
   })
-  grid: any
+  public grid: string[] | undefined
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

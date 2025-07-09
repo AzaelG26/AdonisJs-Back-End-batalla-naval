@@ -9,6 +9,9 @@
 
 import router from '@adonisjs/core/services/router'
 import AuthController from '../app/crud/controllers/auth_controller.js'
+import { middleware } from '#start/kernel'
+import GamesController from '../app/crud/controllers/games_controller.js'
+import MovesController from '../app/crud/controllers/moves_controller.js'
 
 router.get('/', async () => {
   return {
@@ -19,7 +22,27 @@ router.get('/', async () => {
 router.post('/login', [AuthController, 'login'])
 router.post('/register', [AuthController, 'register'])
 router.post('logout', [AuthController, 'logout'])
-router.get('/auth/validate', async ({ auth }) => {
-  await auth.use('api').authenticate()
-  return { valid: true, user: auth.user }
-})
+
+router
+  .group(() => {
+    router.get('/games', [GamesController, 'index'])
+    router.post('/games', [GamesController, 'store'])
+    router.get('/games/:id', [GamesController, 'show'])
+    router.put('/games/:id', [GamesController, 'update'])
+    router.post('/games/:id/leave', [GamesController, 'leave'])
+    router.put('/games/:id/cancel', [GamesController, 'cancel'])
+    // Puedes agregar esta si implementas `destroy` como en Laravel
+    // router.delete('/games/:id', [GamesController, 'destroy'])
+    // Estadísticas (gamesPlayed, gamesByResult)
+    router.get('/api/games-played', [GamesController, 'dataOnGamesPlayed']) // Asegúrate de tenerlo en el controller
+    router.get('/api/games-played/results', [GamesController, 'gamesByResult']) // Asegúrate de tenerlo en el controller
+    // MovesController
+    router.get('/games/:gameId/moves', [MovesController, 'index'])
+    router.post('/games/:gameId/moves', [MovesController, 'store'])
+
+    router.get('/auth/validate', async ({ auth }) => {
+      const user = await auth.use('api').authenticate()
+      return { valid: true, user }
+    })
+  })
+  .use(middleware.auth())

@@ -1,15 +1,11 @@
-// import type { HttpContext } from '@adonisjs/core/http'
 import { HttpContext } from '@adonisjs/core/http'
 import Game from '#models/game'
 import Board from '#models/board'
-import Move from '#models/move'
-import { inject } from '@adonisjs/core'
+import User from '#models/user'
 
-@inject()
 export default class GamesController {
   public async index({ auth, response }: HttpContext): Promise<void> {
-    const user = auth.user!
-
+    const user = await auth.use('api').authenticate()
     const games = await Game.query()
       .where('is_active', true)
       .andWhere((query) => {
@@ -22,31 +18,28 @@ export default class GamesController {
       .preload('boards', (b) => b.preload('user'))
     return response.ok({ games })
   }
-
   public async store({ auth, response }: HttpContext) {
-    const user = auth.user!
-
+    const user = await auth.use('api').authenticate()
+    //console.log('👉 user en controller:', user)
+    if (!user) {
+      return response.unauthorized({ message: 'Usuario no autenticado.' })
+    }
     const game = await Game.create({
       playerOneId: user.id,
       status: 'waiting',
       currentTurn: user.id,
     })
-
     const ships = this.generateRandomShips()
-
     await Board.create({
       gameId: game.id,
       userId: user.id,
       grid: ships,
     })
-
     await game.load((loader) => {
       loader.preload('boards', (b) => b.preload('user')).preload('moves')
     })
-
-    return response.created(game)
+    return response.created({ game })
   }
-
   private generateRandomShips(): string[] {
     const ships: string[] = []
     const positions = new Set<string>()
@@ -75,7 +68,7 @@ export default class GamesController {
   }
 
   public async update({ auth, params, response }: HttpContext) {
-    const user = auth.user!
+    const user = await auth.use('api').authenticate()
     const game = await Game.findOrFail(params.id)
     await game.load('boards')
 
@@ -106,7 +99,7 @@ export default class GamesController {
   }
 
   public async leave({ auth, params, response }: HttpContext) {
-    const user = auth.user!
+    const user = await auth.use('api').authenticate()
     const game = await Game.findOrFail(params.id)
 
     if (user.id !== game.playerOneId && user.id !== game.playerTwoId) {
@@ -130,7 +123,7 @@ export default class GamesController {
   }
 
   public async cancel({ auth, params, response }: HttpContext) {
-    const user = auth.user!
+    const user = await auth.use('api').authenticate()
     const game = await Game.findOrFail(params.id)
     await game.load('boards')
 
@@ -143,9 +136,56 @@ export default class GamesController {
     } else {
       game.merge({ status: 'finished', isActive: false })
     }
-
     await game.save()
-
     return response.ok({ message: 'El juego ha sido cancelado.' })
+  }
+  public async dataOnGamesPlayed({ auth, request, response }: HttpContext) {
+    const user = await auth.use('api').authenticate()
+    const withWinner = request.qs().with_winner !== 'false'
+    const query = Game.query().where((q) => {
+        q.where('playerOneId', user.id).orWhere('playerTwoId', user.id)
+      })
+      .where('status', 'finished')
+      .where('isActive', true)
+    if (withWinner) {
+      query.whereNotNull('winnerId')
+    } else {
+      query.whereNull('winnerId')
+    }
+    const games = await query
+    const wins = games.filter((g) => g.winnerId === user.id).length
+    const losses = games.filter((g) => g.winnerId && g.winnerId !== user.id).length
+    return response.ok({ wins, losses })
+  }
+  public async gamesByResult({ auth, request, response }: HttpContext) {
+    const user = await auth.use('api').authenticate()
+    const type = request.qs().type
+    const query = Game.query()
+      .where((q) => {
+        q.where('playerOneId', user.id).orWhere('playerTwoId', user.id)
+      })
+      .where('status', 'finished')
+      .where('isActive', true)
+      .whereNotNull('winnerId')
+    if (type === 'won') {
+      query.where('winnerId', user.id)
+    } else if (type === 'lost') {
+      query.whereNot('winnerId', user.id)
+    } else {
+      return response.badRequest({ error: 'Tipo inválido. Usa "won" o "lost".' })
+    }
+    const games = await query
+    const results = await Promise.all(games.map(async (game) => {
+        const isPlayerOne = game.playerOneId === user.id
+        const opponentId = isPlayerOne ? game.playerTwoId : game.playerOneId
+        const opponent = opponentId ? await User.find(opponentId) : null
+        return {
+          id: game.id,
+          me: user.fullName || user.email,
+          opponent: opponent?.fullName || opponent?.email || 'Desconocido',
+        }
+      })
+    )
+    return response.ok({ results })
   }
 }

@@ -1,25 +1,19 @@
-import type { HttpContext } from '@adonisjs/core/http'
-import type { NextFn } from '@adonisjs/core/types/http'
-import type { Authenticators } from '@adonisjs/auth/types'
+import { HttpContext } from '@adonisjs/core/http'
+import { NextFn } from '@adonisjs/core/types/http'
 
-/**
- * Auth middleware is used authenticate HTTP requests and deny
- * access to unauthenticated users.
- */
 export default class AuthMiddleware {
-  /**
-   * The URL to redirect to, when authentication fails
-   */
-  redirectTo = '/login'
-
-  async handle(
-    ctx: HttpContext,
-    next: NextFn,
-    options: {
-      guards?: (keyof Authenticators)[]
-    } = {}
-  ) {
-    await ctx.auth.authenticateUsing(options.guards, { loginRoute: this.redirectTo })
-    return next()
+  async handle(ctx: HttpContext, next: NextFn) {
+    //console.log('🔐 Entró al middleware')
+    try {
+      await ctx.auth.use('api').authenticate()
+      //console.log('👤 Usuario autenticado:', ctx.auth.use('api').user)
+      await next()
+    } catch (error) {
+      console.log('❌ Auth failed:', error.message)
+      return ctx.response.status(401).send({
+        message: 'Unauthorized. Invalid or expired token.',
+        error: error.message,
+      })
+    }
   }
 }

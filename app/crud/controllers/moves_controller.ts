@@ -4,6 +4,7 @@ import Game from '#models/game'
 import Move from '#models/move'
 import Board from '#models/board'
 import { storeMoveValidator } from '../validators/store_move.js'
+import User from '#models/user'
 
 export default class MovesController {
   public async index({ params, response }: HttpContext) {
