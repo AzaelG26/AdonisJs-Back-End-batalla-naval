@@ -1,4 +1,3 @@
-// import type { HttpContext } from '@adonisjs/core/http'
 import { HttpContext } from '@adonisjs/core/http'
 import Game from '#models/game'
 import Move from '#models/move'
@@ -9,16 +8,14 @@ import User from '#models/user'
 export default class MovesController {
   public async index({ params, response }: HttpContext) {
     const game = await Game.findOrFail(params.gameId)
-
     await game.load('moves', (query) => {
       query.preload('user')
     })
-
     return response.ok({ moves: game.moves })
   }
 
   public async store({ auth, params, request, response }: HttpContext) {
-    const user = auth.user!
+    const user = await auth.use('api').authenticate()
     const game = await Game.findOrFail(params.gameId)
 
     // 1) Validar estado

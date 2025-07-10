@@ -31,15 +31,10 @@ router
     router.put('/games/:id', [GamesController, 'update'])
     router.post('/games/:id/leave', [GamesController, 'leave'])
     router.put('/games/:id/cancel', [GamesController, 'cancel'])
-    // Puedes agregar esta si implementas `destroy` como en Laravel
-    // router.delete('/games/:id', [GamesController, 'destroy'])
-    // Estadísticas (gamesPlayed, gamesByResult)
-    router.get('/api/games-played', [GamesController, 'dataOnGamesPlayed']) // Asegúrate de tenerlo en el controller
-    router.get('/api/games-played/results', [GamesController, 'gamesByResult']) // Asegúrate de tenerlo en el controller
-    // MovesController
+    router.get('/api/games-played', [GamesController, 'dataOnGamesPlayed'])
+    router.get('/api/games-played/results', [GamesController, 'gamesByResult'])
     router.get('/games/:gameId/moves', [MovesController, 'index'])
     router.post('/games/:gameId/moves', [MovesController, 'store'])
-
     router.get('/auth/validate', async ({ auth }) => {
       const user = await auth.use('api').authenticate()
       return { valid: true, user }

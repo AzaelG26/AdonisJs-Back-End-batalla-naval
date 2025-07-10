@@ -61,7 +61,9 @@ export default class GamesController {
   public async show({ params, response }: HttpContext) {
     const game = await Game.findOrFail(params.id)
     await game.load((loader) => {
-      loader.preload('boards', (b) => b.preload('user')).preload('moves')
+      loader
+        .preload('boards', (b) => b.preload('user'))
+        .preload('moves', (m) => m.preload('user'))
     })
 
     return response.ok({ game })
@@ -142,7 +144,8 @@ export default class GamesController {
   public async dataOnGamesPlayed({ auth, request, response }: HttpContext) {
     const user = await auth.use('api').authenticate()
     const withWinner = request.qs().with_winner !== 'false'
-    const query = Game.query().where((q) => {
+    const query = Game.query()
+      .where((q) => {
         q.where('playerOneId', user.id).orWhere('playerTwoId', user.id)
       })
       .where('status', 'finished')
@@ -175,7 +178,8 @@ export default class GamesController {
       return response.badRequest({ error: 'Tipo inválido. Usa "won" o "lost".' })
     }
     const games = await query
-    const results = await Promise.all(games.map(async (game) => {
+    const results = await Promise.all(
+      games.map(async (game) => {
         const isPlayerOne = game.playerOneId === user.id
         const opponentId = isPlayerOne ? game.playerTwoId : game.playerOneId
         const opponent = opponentId ? await User.find(opponentId) : null
