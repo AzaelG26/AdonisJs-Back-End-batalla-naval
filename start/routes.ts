@@ -21,10 +21,10 @@ router.get('/', async () => {
 
 router.post('/login', [AuthController, 'login'])
 router.post('/register', [AuthController, 'register'])
-router.post('logout', [AuthController, 'logout'])
 
 router
   .group(() => {
+    router.post('logout', [AuthController, 'logout'])
     router.get('/games', [GamesController, 'index'])
     router.post('/games', [GamesController, 'store'])
     router.get('/games/:id', [GamesController, 'show'])
