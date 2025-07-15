@@ -58,7 +58,7 @@ export default class MovesController {
       .where('user_id', opponentId)
       .firstOrFail()
 
-    const grid: string[] = board.grid
+    const grid: string[] = board.grid ?? []
     const hit = grid.includes(pos)
 
     // 6) Registrar movimiento

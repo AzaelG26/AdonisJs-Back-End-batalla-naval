@@ -46,8 +46,8 @@ export default class Game extends BaseModel {
   winner?: BelongsTo<typeof User>
 
   @hasMany(() => Board)
-  boards?: HasMany<typeof Board>
+  declare boards: HasMany<typeof Board>
 
   @hasMany(() => Move)
-  moves?: HasMany<typeof Move>
+  declare moves: HasMany<typeof Move>
 }
